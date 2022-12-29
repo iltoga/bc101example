@@ -1,0 +1,36 @@
+body {
+  font-family: Arial, sans-serif;
+  color: #333;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.section {
+  padding: 5px;
+  margin: 2px;
+}
+
+button {
+  margin: 10px 10px;
+}
+
+td.data {
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+
+
