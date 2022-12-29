@@ -108,9 +108,26 @@ class App extends React.Component {
   }
 
   // The handleHashChange function updates the hashToVerify property in the component's state with the value of the input field.
-  handleChange = (event) => {
+  handleChangeCurrentBlockData = (event) => {
+    // SETF
+    // this.setState({
+    //   [event.target.name]: event.target.value
+    // });
     this.setState({ currentBlockData: event.target.value });
   }
+
+  handleBlockNumberChange = (event) => {
+    this.setState({ currentBlockNumber: event.target.value });
+  }
+
+  handleHashChange = (event) => {
+    this.setState({ currentHashToVerify: event.target.value });
+  }
+
+  handleNonceChange = (event) => {
+    this.setState({ currentNonce: event.target.value });
+  }
+
 
   // The handleSubmit function is called when the form is submitted.
   // It prevents the default refresh of the page and adds a new block to the blockchain with the data from the input field.
@@ -136,7 +153,7 @@ class App extends React.Component {
         <form onSubmit={this.handleSubmit}>
           <label>
             Data:
-            <input type="text" value={this.state.currentBlockData} onChange={this.handleChange} />
+            <input type="text" value={this.state.currentBlockData} onChange={this.handleChangeCurrentBlockData} />
           </label>
           <button type="submit">Add block</button>
         </form>
@@ -198,10 +215,6 @@ class App extends React.Component {
     );
   }
   
-  handleBlockNumberChange = (event) => {
-    this.setState({ currentBlockNumber: event.target.value });
-  }
-
   verifyHash = (event) => {
     event.preventDefault();
   
@@ -220,9 +233,9 @@ class App extends React.Component {
   
     // Compare the calculated hash to the hash to verify
     if (calculatedHash === hashToVerify) {
-      console.log("Hash is valid");
+      alert("Hash is valid")
     } else {
-      console.log("Hash is invalid");
+      alert("Hash is invalid");
     }
   }
     
