@@ -1,24 +1,69 @@
-import React, { useState } from 'react';
+import React from 'react';
 import SHA256 from 'crypto-js/sha256';
 
 // Set the difficulty level
 const DIFFICULTY = 2;
 
+// Helper fuction to calculate time elapsed
+var startTime, endTime;
+
+const startTimer = () => {
+  startTime = performance.now();
+};
+
+const endTimer = () => {
+  endTime = performance.now();
+  var timeDiff = endTime - startTime; //in ms 
+  return timeDiff + " ms";
+}
+
+// The computeHash function calculates and returns the hash of the block.
+const computeHash = (data, previousHash, timestamp, nonce) => {
+  const hash = SHA256(data + previousHash + timestamp + nonce).toString();  
+  return hash;
+}
+
+const generateRandomPhrase = (length) => {
+  // create a list of words to use as the source for the phrases
+  var words = ['apple', 'banana', 'cherry', 'date', 'elderberry', 'fig', 'grape', 'huckleberry',
+  'kiwi', 'lemon', 'mango', 'nectarine', 'orange', 'peach', 'plum', 'quince',
+  'raspberry', 'strawberry', 'tangerine', 'ugli fruit', 'watermelon'];
+
+  // initialize the result as an empty string
+  var result = '';
+
+  // choose a random word from the list and add it to the result
+  for (var i = 0; i < length; i++) {
+    var word = words[Math.floor(Math.random() * words.length)];
+    result += word;
+
+    // add a space between words, except for the last one
+    if (i < length - 1) {
+      result += ' ';
+    }
+  }
+
+  return result;
+}
+
 // Define the Block class
 class Block {
   // The constructor function is called whenever a new Block instance is created.
   // It initializes the properties of the new block object.
-  constructor(data, previousHash) {
+  constructor(data, previousHash, timestamp) {
     this.data = data;
     this.previousHash = previousHash;
-    this.timestamp = Date.now();
+    this.timestamp = timestamp ? timestamp : Date.now();
     this.nonce = 0;
     this.hash = this.calculateHash();
   }
 
   // The calculateHash function calculates and returns the hash of the block.
-  calculateHash() {
-    const hash = SHA256(this.data + this.previousHash + this.timestamp + this.nonce).toString();
+  calculateHash(nonce) {
+    if (nonce !== '') {
+      this.nonce = nonce;
+    }
+    let hash = computeHash(this.data, this.previousHash, this.timestamp, this.nonce)
     console.log(`Hash calculation: SHA256("${this.data}" + "${this.previousHash}" + "${this.timestamp}" + "${this.nonce}") = ${hash}`);
     return hash;
   }
@@ -27,14 +72,14 @@ class Block {
   mineBlock(difficulty) {
     console.log('Mining block...');
 
+    startTimer();
     // Loop until the block's hash meets the difficulty requirement
-    while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
-      // Increment the nonce and recalculate the hash
-      this.nonce++;
-      this.hash = this.calculateHash();
-    }
+    this.nonce = blockchain.calculateNonce(this, difficulty);
+    this.hash = this.calculateHash(this.nonce);
 
-    console.log(`Block mined: ${this.hash} (nonce: ${this.nonce})`);
+    const output = `Block mined: ${this.hash} (Nonce: ${this.nonce}) Elapsed: ${endTimer()} Difficulty: ${difficulty}`;      
+    console.log(output);
+    return output;
   }
 }
 
@@ -58,32 +103,30 @@ class Blockchain {
   }
 
   // The addBlock function adds a new block to the chain.
-  addBlock(newBlock) {
-    // if (!this.verifyNonce()) {
-    //   console.log("Invalid nonce in previous block");
-    //   return;
-    // }    
+  addBlock(newBlock, difficulty = DIFFICULTY) {
     // Set the new block's previous hash to the hash of the latest block in the chain.
     newBlock.previousHash = this.getLatestBlock().hash;
     // Mine the new block.
-    newBlock.mineBlock(DIFFICULTY);
+    alert(newBlock.mineBlock(difficulty));
     // Add the new block to the chain.
     this.chain.push(newBlock);
   }
   
-  calculateNonce(block) {
+  calculateNonce(block, difficulty) {
     let nonce = 0;
-    let hash = block.calculateHash();
-    while (hash.substring(0, DIFFICULTY) !== Array(DIFFICULTY + 1).join("0")) {
+    let hash = block.calculateHash(nonce);
+    while (hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
       nonce++;
-      hash = block.calculateHash();
+      hash = block.calculateHash(nonce);
     }
+    
+    block.hash = hash;
     return nonce;
   }
 
-  verifyNonce(block) {
+  verifyNonce(block, difficulty) {
     // Verify the nonce of the block
-    if (block.nonce !== this.calculateNonce(block)) {
+    if (block.nonce !== this.calculateNonce(block, difficulty)) {
       return false;
     }
     return true;
@@ -107,25 +150,23 @@ class App extends React.Component {
     };
   }
 
-  // The handleHashChange function updates the hashToVerify property in the component's state with the value of the input field.
-  handleChangeCurrentBlockData = (event) => {
-    // SETF
-    // this.setState({
-    //   [event.target.name]: event.target.value
-    // });
-    this.setState({ currentBlockData: event.target.value });
+  simulateMineBlock = () => {
+    const data = this.state.data;
+    const previousHash = this.state.previousHash;
+    const timestamp = this.state.timestamp;
+    const difficulty = this.state.difficulty ? this.state.difficulty : DIFFICULTY;
+    
+    const b = new Block(data, previousHash, timestamp);
+    alert(b.mineBlock(difficulty));
+
+  }  
+
+  handleChange = (event) => {
+    this.setState({ [event.target.name]: event.target.value });
   }
 
-  handleBlockNumberChange = (event) => {
-    this.setState({ currentBlockNumber: event.target.value });
-  }
-
-  handleHashChange = (event) => {
-    this.setState({ currentHashToVerify: event.target.value });
-  }
-
-  handleNonceChange = (event) => {
-    this.setState({ currentNonce: event.target.value });
+  handleChangeNumeric = (event) => {
+    this.setState({ [event.target.name]: event.target.value*1 });
   }
 
 
@@ -134,44 +175,80 @@ class App extends React.Component {
   // It then updates the blocks property in the component's state with the updated chain.
   handleSubmit = (event) => {
     event.preventDefault();
-    const newBlock = new Block(this.state.currentBlockData, this.state.blocks[this.state.blocks.length - 1].hash);
-    blockchain.addBlock(newBlock);
+    const blockData = this.state.currentBlockData === '' ? generateRandomPhrase(20) : this.state.currentBlockData
+    const newBlock = new Block(blockData, this.state.blocks[this.state.blocks.length - 1].hash);
+    const difficulty = this.state.difficulty ? this.state.difficulty : DIFFICULTY;
+    blockchain.addBlock(newBlock, difficulty);
     this.setState({
       blocks: blockchain.chain,
       currentBlockData: ''
     });
   }
 
+  calculateHash = (event) => {
+    event.preventDefault();
+    const { data, previousHash, timestamp, nonce } = this.state;
+    const hash = computeHash(data, previousHash, timestamp, nonce).toString();
+    this.setState({ hash });
+  }
+
   // The render function is called whenever the component's state or props are updated.
   // It returns the JSX code that will be rendered to the DOM.
-
   render = () => {
-    const blocks = this.state.blocks;
     return (
-      <div className="section">
-        <h1>Blockchain Demo</h1>
-        <form onSubmit={this.handleSubmit}>
-          <label>
-            Data:
-            <input type="text" value={this.state.currentBlockData} onChange={this.handleChangeCurrentBlockData} />
-          </label>
-          <button type="submit">Add block</button>
-        </form>
-        <form onSubmit={this.verifyHash}>
-          <label>
-            Block number:
-            <input type="number" value={this.state.currentBlockNumber} onChange={this.handleBlockNumberChange} />
-          </label>
-          <label>
-            Hash to verify:
-            <input type="text" value={this.state.currentHashToVerify} onChange={this.handleHashChange} />
-          </label>
-          <label>
-            Nonce:
-            <input type="text" value={this.state.currentNonce} onChange={this.handleNonceChange} />
-          </label>
-          <button type="submit">Verify</button>
-        </form>
+      <div className="App">
+        <header className="App-header">
+          <h1>Blockchain Demo</h1>
+        </header>
+        <div className="forms-container">
+          <form onSubmit={this.handleSubmit}>
+            <label>
+              Data:
+              <input type="text" name="currentBlockData" onChange={this.handleChange} />
+            </label>
+            <label>
+              Difficulty:
+              <input type="text" name="difficulty" onChange={this.handleChangeNumeric} />
+            </label>
+            <button type="submit">Add block</button>
+          </form>
+          <form onSubmit={this.calculateHash}>
+            <label>
+              Data:
+              <input type="text" name="data" onChange={this.handleChange} />
+            </label>
+            <label>
+              Previous Hash:
+              <input type="text" name="previousHash" onChange={this.handleChange} />
+            </label>
+            <label>
+              Timestamp:
+              <input type="text" name="timestamp" onChange={this.handleChange} />
+            </label>
+            <label>
+              Nonce:
+              <input type="text" name="nonce" onChange={this.handleChange} />
+            </label>
+            { this.state.hash ? <p className='form-calculatedHash'>{this.state.hash}</p> : <p></p> }
+            <button type="submit">Calculate Hash</button>
+            <button type="button" onClick={this.simulateMineBlock}>Mine Block</button>
+          </form>
+          <form onSubmit={this.verifyHash}>
+            <label>
+              Block number:
+              <input type="number" name="currentBlockNumber" onChange={this.handleChange} />
+            </label>
+            <label>
+              Hash to verify:
+              <input type="text" name="currentHashToVerify" onChange={this.handleChange} />
+            </label>
+            <label>
+              Nonce:
+              <input type="text" name="currentNonce" onChange={this.handleChange} />
+            </label>
+            <button type="submit">Verify</button>
+          </form>
+        </div>
         <h2>Proof-of-Work (PoW)</h2>
           <p>
             In a blockchain that uses PoW, each block contains a hash that is calculated using the data in the block, the previous block's hash, the timestamp, and a nonce.
@@ -181,36 +258,78 @@ class App extends React.Component {
             The hash calculation for each block can be represented as follows:
             SHA256(block data + previousHash + block timestamp + nonce) = block hash
           </p>
-        <h2>Blocks</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Block number</th>
-              <th>Data</th>
-              <th>Timestamp</th>
-              <th>Previous hash</th>
-              <th>Hash</th>
-              <th>Nonce</th>
-            </tr>
-          </thead>
-          <tbody>
-            {this.state.blocks.map((block, index) =>
-              <React.Fragment>
-                <tr key={index}>
-                  <td rowSpan={2}>{index}</td>
-                  <td></td>
-                  <td>{block.timestamp}</td>
-                  <td>{block.previousHash}</td>
-                  <td>{block.hash}</td>
-                  <td>{block.nonce}</td>
-                </tr>
-                <tr>
-                  <td colSpan="6">{block.data}</td>
-                </tr>
-              </React.Fragment>
-            )}
-          </tbody>
-        </table>
+        <header className="App-header">
+          <h1>Blockchain</h1>
+        </header>
+        <main>
+          {/* Map through the blocks in the chain and render them as rectangles */}
+              <div className="block-container">
+                {this.state.blocks.map((block, index) => {
+                  return (
+                    <div className="block-rectangle" key={index}>
+                      <div>
+                        <label>Block N. </label>
+                        <span className="block-number">{index}</span>
+                      </div>
+                      <div>
+                        <label>Data:</label>
+                        <span className="block-data">{block.data}</span>
+                      </div>
+                      <div>
+                        <label>Timestamp:</label>
+                        <span className="block-timestamp">{block.timestamp}</span>
+                      </div>
+                      <div>
+                        <label>Previous hash:</label>
+                        <span className="block-previous-hash">{block.previousHash}</span>
+                      </div>
+                      <div>
+                        <label>Nonce:</label>
+                        <span className="block-nonce">{block.nonce}</span>
+                      </div>
+                      <div>
+                        <label>Hash:</label>
+                        <span className="block-hash">{block.hash}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+        </main>
+        <div className='blockdata-container' style={{height: '500px', overflowY: 'scroll'}}>
+          <header className="App-header">
+            <h1>Blocks</h1>
+          </header>
+          <table>
+            <thead>
+              <tr>
+                <th>Block number</th>
+                <th>Data</th>
+                <th>Timestamp</th>
+                <th>Previous hash</th>
+                <th>Hash</th>
+                <th>Nonce</th>
+              </tr>
+            </thead>
+            <tbody>
+              {this.state.blocks.map((block, index) =>
+                <React.Fragment>
+                  <tr key={index}>
+                    <td rowSpan={2}>{index}</td>
+                    <td></td>
+                    <td>{block.timestamp}</td>
+                    <td>{block.previousHash}</td>
+                    <td>{block.hash}</td>
+                    <td>{block.nonce}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan="6">{block.data}</td>
+                  </tr>
+                </React.Fragment>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }

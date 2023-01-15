@@ -1,6 +1,14 @@
 # Blockchain Demo
 
-This is a small application that demonstrates the use of blockchain technology.
+This application is a simple implementation of a blockchain using the React JavaScript library and the SHA256 cryptographic hash function from the crypto-js library. It includes a `Block` class that defines a block and a `Blockchain` class that defines a blockchain. 
+
+The `Block` class has a constructor function that initializes the properties of the block, including the data, previous hash, timestamp, nonce, and hash. It also includes a `calculateHash` function that calculates the hash of the block and a `mineBlock` function that mines the block by repeatedly calculating the block's hash until it meets the difficulty requirement. The `Blockchain` class has a constructor function that initializes the chain property with an array containing the genesis block. It also includes a `createGenesisBlock` function that creates and returns the genesis block and a `getLatestBlock` function that returns the latest block in the chain.
+
+The `DIFFICULTY` variable is set to 2 and the `computeHash`, `generateRandomPhrase`, `startTimer` and `endTimer` are helper functions.
+
+The code also includes a `console.log` statements for debugging and understanding the flow of the code.
+
+This is a simple implementation that can be used as a starting point to understand the basic mechanics of a blockchain.
 
 ## Classes
 
@@ -25,7 +33,7 @@ The `Block` class represents a block, which consists of data and a hash. A block
 
 ### App
 
-The `App` component is a React component that displays the blocks in the blockchain and allows the user to add new blocks to the chain or verify the nonce of a block. The user can input data for a new block in a text field, and when the user clicks the "Add block" button, the `addBlock` method of the `blockchain` object is called with the new block. The user can also input a block's hash in a text field and click the "Verify nonce" button, which will use the `verifyNonce` method to check if the block's nonce is valid. The component's state
+The `App` component is a React component that displays the blocks in the blockchain and allows the user to add new blocks to the chain or verify the nonce of a block. The user can input data for a new block in a text field, and when the user clicks the "Add block" button, the `addBlock`
 
 ## Running the App
 
